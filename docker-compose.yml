@@ -1,14 +1,18 @@
 version: "3.5"
 
 services:
-    web-example:
-        build:
-            context: .
-        expose:
-            - 5000
-        volumes:
-            - .:/app:ro
-        command: /usr/local/bin/gunicorn -k gevent --reload --workers 10 --worker-connections 10 --access-logfile=- --pythonpath /app -b :5000 app:app
+  web-example:
+    build:
+      context: .
+    # … остальные поля (ports, depends_on) оставьте без изменений …
+
+    volumes:
+      # ➊ исходный код монтируем «только‑чтение» (как было)
+      - ./:/app:ro
+
+      # ➋ новая папка для данных SQLite (read‑write)
+      - ./data:/data            # ← папка data создастся рядом с compose‑файлом
+
 
     nginx:
         restart: always
