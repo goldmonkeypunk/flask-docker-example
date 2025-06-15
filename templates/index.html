@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="mb-3">Відвідуваність та оплата</h1>
+
+<table id="tbl" class="table table-striped align-middle">
+  <thead>
+    <tr>
+      <th>Учень</th>
+      <th>Уроки</th>
+      <th>₴ / тиждень</th>
+      <th></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {% for s in students %}
+    <tr id="row-{{ s.id }}">
+      <td>{{ s.name }}</td>
+      <td class="lessons">{{ '%d' % (s.week / 130) }}</td>
+      <td class="fw-semibold sum">{{ s.week }}</td>
+      <td>
+        <button class="btn btn-sm btn-success add-btn" data-id="{{ s.id }}">+</button>
+        <button class="btn btn-sm btn-danger  del-btn" data-id="{{ s.id }}">–</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+
+  <tfoot>
+    <tr>
+      <td colspan="4" class="text-end fw-bold" id="total">
+        Усього: {{ total }} ₴
+      </td>
+    </tr>
+  </tfoot>
+</table>
+
+<h2 class="mt-4">Пісні</h2>
+<ul class="list-group">
+  {% for t in songs %}
+  <li class="list-group-item d-flex justify-content-between align-items-center">
+    {{ t.title }}
+    <div>
+      <span class="badge bg-secondary me-3">{{ '★' * t.difficulty }}</span>
+      <select class="form-select form-select-sm d-inline w-auto song-select"
+              data-song-id="{{ t.id }}">
+        <option selected disabled>Призначити учню…</option>
+        {% for s in students %}
+        <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+
+<!-- подключаем единственный скрипт -->
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,6 @@
+body{
+  background:linear-gradient(135deg,#e9f2ff 0%,#ffffff 100%);
+}
+[data-bs-theme="dark"] body{
+  background:linear-gradient(135deg,#2b2e36 0%,#202227 100%);
+}
