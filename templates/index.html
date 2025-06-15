@@ -3,13 +3,11 @@
 
 <h1 class="mb-3">Відвідуваність та оплата</h1>
 
-<table id="tbl" class="table table-striped align-middle">
+<table class="table table-striped align-middle">
   <thead>
     <tr>
-      <th>Учень</th>
-      <th>Уроки</th>
-      <th>₴ / тиждень</th>
-      <th></th>
+      <th>Учень</th><th>Уроки</th><th>₴ / тиждень</th>
+      {% if current_user.role == 'teacher' %}<th></th>{% endif %}
     </tr>
   </thead>
 
@@ -19,18 +17,21 @@
       <td>{{ s.name }}</td>
       <td class="lessons">{{ '%d' % (s.week / 130) }}</td>
       <td class="fw-semibold sum">{{ s.week }}</td>
+      {% if current_user.role == 'teacher' %}
       <td>
         <button class="btn btn-sm btn-success add-btn" data-id="{{ s.id }}">+</button>
         <button class="btn btn-sm btn-danger  del-btn" data-id="{{ s.id }}">–</button>
       </td>
+      {% endif %}
     </tr>
     {% endfor %}
   </tbody>
 
   <tfoot>
     <tr>
-      <td colspan="4" class="text-end fw-bold" id="total">
-        Усього: {{ total }} ₴
+      <td colspan="{{ 4 if current_user.role == 'teacher' else 3 }}"
+          class="text-end fw-bold" id="total">
+          Усього: {{ total }} ₴
       </td>
     </tr>
   </tfoot>
@@ -43,18 +44,17 @@
     {{ t.title }}
     <div>
       <span class="badge bg-secondary me-3">{{ '★' * t.difficulty }}</span>
+      {% if current_user.role == 'teacher' %}
       <select class="form-select form-select-sm d-inline w-auto song-select"
               data-song-id="{{ t.id }}">
         <option selected disabled>Призначити учню…</option>
-        {% for s in students %}
-        <option value="{{ s.id }}">{{ s.name }}</option>
-        {% endfor %}
+        {% for s in students %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
       </select>
+      {% endif %}
     </div>
   </li>
   {% endfor %}
 </ul>
 
-<!-- подключаем единственный скрипт -->
 <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 {% endblock %}

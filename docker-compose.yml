@@ -1,26 +1,29 @@
-version: "3.5"
-
 services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:8080"
+    restart: always
+    volumes:
+      - ./static:/www/static:ro
+      - ./etc/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web-example
+
   web-example:
     build:
       context: .
-    # … остальные поля (ports, depends_on) оставьте без изменений …
-
+      dockerfile: Dockerfile
+    expose:
+      - "5000"
+    command:
+      - /usr/local/bin/gunicorn
+      - -k
+      - gevent
+      - --bind
+      - 0.0.0.0:5000
+      - app:app
     volumes:
-      # ➊ исходный код монтируем «только‑чтение» (как было)
-      - ./:/app:ro
-
-      # ➋ новая папка для данных SQLite (read‑write)
-      - ./data:/data            # ← папка data создастся рядом с compose‑файлом
-
-
-    nginx:
-        restart: always
-        image: nginx:latest
-        ports:
-            - "8080:8080"
-        volumes:
-            - ./static:/www/static:ro
-            - ./etc/nginx.conf:/etc/nginx/conf.d/default.conf
-
-
+      - ./:/app:ro           # код read‑only
+      - ./data:/data         # БД read‑write
+    restart: unless-stopped

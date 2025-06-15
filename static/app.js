@@ -2,7 +2,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  /* ───── обработчики + / – ───── */
+  /* lesson +/- кнопки (только у админа) */
   document.querySelectorAll(".add-btn").forEach(btn => {
     btn.addEventListener("click", () => handleLesson(btn.dataset.id, "POST"));
   });
@@ -16,15 +16,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const j = await r.json();
     updateRow(id, j);
   }
-
   function updateRow(id, j) {
     const row = document.getElementById(`row-${id}`);
     row.querySelector(".lessons").innerText = j.week / 130;
-    row.querySelector(".sum").innerText = j.week;
+    row.querySelector(".sum").innerText     = j.week;
     document.getElementById("total").innerText = `Усього: ${j.total} ₴`;
   }
 
-  /* ───── assign song ───── */
+  /* assign song (только у админа) */
   document.querySelectorAll(".song-select").forEach(sel => {
     sel.addEventListener("change", async () => {
       const song  = sel.dataset.songId;
@@ -35,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
         body   : JSON.stringify({ student_id: stud, song_id: song })
       });
-      sel.selectedIndex = 0;         // сбросить выпадайку
+      sel.selectedIndex = 0;
     });
   });
 
