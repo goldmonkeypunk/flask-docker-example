@@ -1,31 +1,31 @@
-name: E2E нічні тести
+name: E2E нічні тести (Playwright)
 
 on:
-  schedule:
-    # */144 = кожні 10 хвилин ⇒ 144 запусків/доба.
-    # Візьмемо кожні 144 хвилини (10 разів/доба).
+  schedule:         # 10 разів на добу → кожні 2 години
     - cron: '0 */2 * * *'
   workflow_dispatch:
 
 jobs:
   e2e:
+    name: 🌐 End‑to‑End тести
     runs-on: ubuntu-latest
     steps:
-      - name: 🛎️ Клоную код
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🐳 Стартую docker-композицію
+      - name: 🚀 Піднімаю docker‑compose
         run: docker compose up -d
 
-      - name: 🧪 Запускаю Playwright-тести
+      - name: 🛠️ Встановлюю Playwright
         uses: microsoft/playwright-github-action@v1
         with:
           args: install --with-deps
-      - run: |
+
+      - name: 🧪 Запускаю тести
+        run: |
           npm ci
           npx playwright test
 
-      - name: 📦 Збираю артефакти (результати)
+      - name: 📦 Зберігаю репорт
         if: always()
         uses: actions/upload-artifact@v4
         with:
