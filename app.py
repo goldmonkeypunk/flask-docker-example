@@ -1,8 +1,9 @@
 from __future__ import annotations
-import pathlib, datetime as dt, time, logging, calendar
+import pathlib, datetime as dt, calendar, logging
 from flask import Flask, render_template, jsonify, abort, request, redirect, url_for
 from flask_login import LoginManager, login_required, current_user
 from werkzeug.security import generate_password_hash
+from sqlalchemy import delete
 from models import db, User, Student, Song, Attendance, StudentSong
 
 PRICE = 130
@@ -16,25 +17,26 @@ app.config.update(
 )
 db.init_app(app)
 
-# ───── login ─────
+# ───── Login ─────
 login = LoginManager(app); login.login_view = "auth.login"
 @login.user_loader
 def load_user(uid): return db.session.get(User, uid)
 
-from auth import bp as auth_bp            # noqa: E402
+# ───── Blueprint auth ─────
+from auth import bp as auth_bp                          # noqa: E402
 app.register_blueprint(auth_bp)
 
 # ───── helpers ─────
 def month_info(year: int, month: int):
-    days_in_month = calendar.monthrange(year, month)[1]
-    dates = [dt.date(year, month, d) for d in range(1, days_in_month + 1)]
+    days_cnt = calendar.monthrange(year, month)[1]
+    dates = [dt.date(year, month, d) for d in range(1, days_cnt + 1)]
     return dates, dates[0], dates[-1]
 
 def admin_required():
     if current_user.role != "teacher":
         abort(403, "Тільки адміністратор може виконати дію")
 
-def sum_for_student(stu_id: int, start: dt.date, end: dt.date) -> int:
+def month_sum(stu_id: int, start: dt.date, end: dt.date) -> int:
     cnt = Attendance.query.filter_by(student_id=stu_id)\
           .filter(Attendance.date.between(start, end)).count()
     return cnt * PRICE
@@ -62,12 +64,12 @@ def journal():
 
     rows = [{"id": s.id,
              "name": s.name,
-             "month_sum": sum_for_student(s.id, d_start, d_end)}
+             "month_sum": month_sum(s.id, d_start, d_end)}
             for s in studs]
 
     return render_template("journal.html",
-        year=y, month=m, days=days, students=rows, attend=attend,
-        total=sum(r["month_sum"] for r in rows))
+        year=y, month=m, days=days, students=rows,
+        attend=attend, total=sum(r["month_sum"] for r in rows))
 
 # -------- учні --------
 @app.get("/students")
@@ -87,7 +89,7 @@ def students():
 def songs():
     return render_template("songs.html", songs=Song.query.all())
 
-# -------- API --------
+# ───── API ─────
 @app.post("/api/attendance/toggle")
 @login_required
 def toggle_attendance():
@@ -101,9 +103,9 @@ def toggle_attendance():
 
     y, m = d.year, d.month
     _, start, end = month_info(y, m)
-    month_sum = sum_for_student(sid, start, end)
+    m_sum = month_sum(sid, start, end)
     total = db.session.query(Attendance.id).count() * PRICE
-    return jsonify({"month_sum": month_sum, "total": total})
+    return jsonify({"month_sum": m_sum, "total": total})
 
 @app.post("/api/student")
 @login_required
@@ -114,6 +116,16 @@ def add_student():
     s = Student(name=name, parent_id=current_user.id)
     db.session.add(s); db.session.commit()
     return jsonify({"id": s.id, "name": s.name}), 201
+
+@app.delete("/api/student/<int:sid>")
+@login_required
+def delete_student(sid):
+    admin_required()
+    db.session.execute(delete(StudentSong).where(StudentSong.student_id == sid))
+    db.session.execute(delete(Attendance ).where(Attendance.student_id  == sid))
+    db.session.execute(delete(Student    ).where(Student.id == sid))
+    db.session.commit()
+    return "", 204
 
 @app.post("/api/song")
 @login_required
@@ -127,6 +139,15 @@ def add_song():
     db.session.add(song); db.session.commit()
     return jsonify({"id": song.id}), 201
 
+@app.delete("/api/song/<int:tid>")
+@login_required
+def delete_song(tid):
+    admin_required()
+    db.session.execute(delete(StudentSong).where(StudentSong.song_id == tid))
+    db.session.execute(delete(Song).where(Song.id == tid))
+    db.session.commit()
+    return "", 204
+
 @app.post("/api/assign")
 @login_required
 def assign():
@@ -139,20 +160,81 @@ def assign():
 @app.get("/healthz")
 def health(): return "ok", 200
 
-# ───── seed (как прежде) ─────
+# ───── сид‑дані ─────
 with app.app_context():
     db.create_all()
     if not User.query.first():
         admin = User(email="teacher@example.com",
-                     password=generate_password_hash("secret"), role="teacher")
+                     password=generate_password_hash("secret"),
+                     role="teacher")
         db.session.add(admin); db.session.commit()
-        for n in ["Діана","Саша","Андріана","Маша","Ліза",
-                  "Кіріл","Остап","Єва","Валерія","Аня"]:
-            db.session.add(Student(name=n, parent_id=admin.id))
-        for t,a,d in [("Bluestone Alley","Chad Lawson",2),
-                      ("Smells like teen spirit","Nirvana",1),
-                      ("Horimia","Masaru Yokoyama",3)]:
-            db.session.add(Song(title=t, author=a, difficulty=d))
+
+        pupils = ["Діана","Саша","Андріана","Маша","Ліза","Кіріл","Остап",
+                  "Єва","Валерія","Аня","Матвій","Валентин","Дем'ян",
+                  "Єгор","Нікалай","Глєб","Георгій","Данило"]
+        students = {n: Student(name=n, parent_id=admin.id) for n in pupils}
+        db.session.add_all(students.values())
+
+        songs_data = [
+            ("deluciuos of savior","Slayer",1),
+            ("Bluestone Alley","Wei Congfei",2),
+            ("memories and dreams","Sally Face",1),
+            ("come as you are","Nirvana",1),
+            ("smells like teen spirit","Nirvana",1),
+            ("Horimia","Масару Ёкояма",3),
+            ("falling down","Lil Peep",2),
+            ("sweet dreams","Marilyn Manson",1),
+            ("Chk chk boom","Stray Kids",3),
+            ("Щедрик","Микола Леонтович",2),
+            ("megalovania","Undertale",3),
+            ("feel good","Gorillaz",1),
+            ("Graze the roof","Plants vs Zombies",2),
+            ("смішні голоси","Ногу Свело",2),
+            ("маленький ковбой","Олександр Вінницький",3),
+            ("The Last of Us","G. Santaolalla",3),
+            ("носорігблюз","Юрій Радзецький",4),
+            ("enemy","Imagine Dragons",1),
+            ("Добрий вечір тобі","Народна",2),
+            ("червона калина","Степан Чарнецький",2),
+            ("snowdin town","Undertale",3),
+            ("7 nation army","The White Stripes",1),
+            ("Californication","RHCP",3),
+            ("polly","Nirvana",1),
+        ]
+        songs = {t: Song(title=t, author=a, difficulty=d) for t,a,d in songs_data}
+        db.session.add_all(songs.values()); db.session.commit()
+
+        link = {
+            "Діана":  ["feel good","deluciuos of savior","Graze the roof",
+                       "Bluestone Alley","smells like teen spirit"],
+            "Саша":   ["deluciuos of savior","memories and dreams",
+                       "come as you are","smells like teen spirit"],
+            "Андріана": ["Bluestone Alley","Horimia","come as you are","falling down"],
+            "Маша":   ["sweet dreams","smells like teen spirit","memories and dreams",
+                       "Chk chk boom","come as you are"],
+            "Ліза":   ["sweet dreams","Bluestone Alley","Horimia","Chk chk boom","Щедрик"],
+            "Кіріл":  ["sweet dreams","megalovania","deluciuos of savior","feel good",
+                       "Graze the roof","смішні голоси","falling down","маленький ковбой"],
+            "Остап":  ["megalovania","Добрий вечір тобі","deluciuos of savior",
+                       "червона калина","enemy","snowdin town","feel good",
+                       "come as you are","sweet dreams","sweet dreams"],
+            "Єва":    ["Bluestone Alley","deluciuos of savior","falling down"],
+            "Валерія":["sweet dreams","smells like teen spirit"],
+            "Аня":    ["falling down","Californication","The Last of Us","Horimia",
+                       "deluciuos of savior","memories and dreams","sweet dreams",
+                       "come as you are","polly"],
+            "Валентин":["sweet dreams","deluciuos of savior","смішні голоси"],
+            "Дем'ян": ["sweet dreams"],
+            "Єгор":   ["7 nation army","come as you are","Graze the roof",
+                       "memories and dreams","megalovania","falling down"],
+            "Нікалай":["falling down","смішні голоси"],
+            "Глєб":   ["смішні голоси","носорігблюз","The Last of Us"],
+            "Георгій":["маленький ковбой","носорігблюз","Bluestone Alley"],
+        }
+        for pupil, songlist in link.items():
+            sid = students[pupil].id
+            for title in songlist:
+                db.session.add(StudentSong(student_id=sid, song_id=songs[title].id))
         db.session.commit()
 
 if __name__ == "__main__":

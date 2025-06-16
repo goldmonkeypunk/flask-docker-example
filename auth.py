@@ -7,7 +7,7 @@ from wtforms import EmailField, PasswordField, SubmitField, RadioField
 from wtforms.validators import DataRequired, Email, Length, ValidationError
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
-ADMIN_INVITE_CODE = "admin123"              # измените при необходимости
+ADMIN_INVITE_CODE = "admin123"
 
 # ───── WTForms ─────
 class LoginForm(FlaskForm):
@@ -16,19 +16,20 @@ class LoginForm(FlaskForm):
     submit   = SubmitField("Увійти")
 
 class RegisterForm(FlaskForm):
-    email       = EmailField("Email", validators=[DataRequired(), Email()])
-    password    = PasswordField("Пароль", validators=[DataRequired(), Length(6)])
-    role        = RadioField("Роль", choices=[("parent", "Батьки / Учень"),
-                                              ("teacher", "Адмін")],
-                             default="parent", validators=[DataRequired()])
-    admin_code  = PasswordField("Код для адміна")
-    submit      = SubmitField("Зареєструватись")
+    email      = EmailField("Email", validators=[DataRequired(), Email()])
+    password   = PasswordField("Пароль", validators=[DataRequired(), Length(6)])
+    role       = RadioField("Роль",
+                            choices=[("parent","Батьки / Учень"),
+                                     ("teacher","Адмін")],
+                            default="parent", validators=[DataRequired()])
+    admin_code = PasswordField("Код для адміна")
+    submit     = SubmitField("Зареєструватись")
 
     def validate_admin_code(form, field):
         if form.role.data == "teacher" and field.data != ADMIN_INVITE_CODE:
             raise ValidationError("Невірний admin‑код")
 
-# ───── маршруты ─────
+# ───── routes ─────
 @bp.route("/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
@@ -36,7 +37,7 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
         if user and check_password_hash(user.password, form.password.data):
             login_user(user)
-            return redirect(url_for("index"))
+            return redirect(url_for("journal"))
         flash("Невірний логін / пароль", "danger")
     return render_template("login.html", form=form)
 
@@ -47,12 +48,12 @@ def register():
         if User.query.filter_by(email=form.email.data).first():
             flash("Email вже зареєстровано", "warning")
         else:
-            new_user = User(email=form.email.data,
-                            password=generate_password_hash(form.password.data),
-                            role=form.role.data)
-            db.session.add(new_user); db.session.commit()
-            flash("Успішно! Увійдіть під своїм логіном.", "success")
-            return redirect(url_for("auth.login"))
+            user = User(email=form.email.data,
+                        password=generate_password_hash(form.password.data),
+                        role=form.role.data)
+            db.session.add(user); db.session.commit()
+            login_user(user)                             # ← авто‑login
+            return redirect(url_for("journal"))
     return render_template("register.html", form=form)
 
 @bp.route("/logout")
