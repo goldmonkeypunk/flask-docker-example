@@ -1,0 +1,32 @@
+name: Перевірка коду
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+jobs:
+  flake8-перевірка:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛎️ Отримую репозиторій
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Встановлюю Python та залежності
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt flake8
+
+      - name: 🔍 Запускаю flake8
+        run: flake8 .
+
+  type-аналіз:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: |
+          pip install -r requirements.txt mypy
+          mypy --ignore-missing-imports .
