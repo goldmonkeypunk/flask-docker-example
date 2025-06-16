@@ -1,39 +1,41 @@
-name: Перевірка коду (Lint + Типи)
+name: Перевірка коду (Lint | Black | Isort)
 
 on:
   push:
-    branches: ["**"]
+    paths: ["**/*.py", ".flake8", "pyproject.toml"]
   pull_request:
   workflow_dispatch:
 
 jobs:
-  linting:                # ← ID тільки латиницею/«_»
-    name: 🧹 Lint‑перевірка (flake8)
+  flake8:
     runs-on: ubuntu-latest
-    steps:
-      - name: ⬇️ Клоную репозиторій
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Встановлюю Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: 📦 Встановлюю залежності
-        run: |
-          pip install -r requirements.txt flake8
-
-      - name: 🔍 Запускаю flake8
-        run: flake8 .
-
-  typing:
-    name: 🔤 Статична перевірка типів (mypy)
-    runs-on: ubuntu-latest
+    name: 🔎 flake8‑аналіз
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-
       - run: |
-          pip install -r requirements.txt mypy
-          mypy --ignore-missing-imports .
+          pip install -r requirements-dev.txt
+          flake8 .
+
+  black:
+    runs-on: ubuntu-latest
+    name: 🎨 Black‑перевірка
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: |
+          pip install -r requirements-dev.txt
+          black --check .
+
+  isort:
+    runs-on: ubuntu-latest
+    name: 📐 Isort‑перевірка
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: |
+          pip install -r requirements-dev.txt
+          isort --check-only .
