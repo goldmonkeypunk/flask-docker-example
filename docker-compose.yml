@@ -1,22 +1,29 @@
-version: "3.5"
-
 services:
-    web-example:
-        build:
-            context: .
-        expose:
-            - 5000
-        volumes:
-            - .:/app:ro
-        command: /usr/local/bin/gunicorn -k gevent --reload --workers 10 --worker-connections 10 --access-logfile=- --pythonpath /app -b :5000 app:app
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:8080"
+    restart: always
+    volumes:
+      - ./static:/www/static:ro
+      - ./etc/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - web-example
 
-    nginx:
-        restart: always
-        image: nginx:latest
-        ports:
-            - "8080:8080"
-        volumes:
-            - ./static:/www/static:ro
-            - ./etc/nginx.conf:/etc/nginx/conf.d/default.conf
-
-
+  web-example:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "5000"
+    command:
+      - /usr/local/bin/gunicorn
+      - -k
+      - gevent
+      - --bind
+      - 0.0.0.0:5000
+      - app:app
+    volumes:
+      - ./:/app:ro           # код read‑only
+      - ./data:/data         # БД read‑write
+    restart: unless-stopped
