@@ -1,49 +1,47 @@
 {% extends "base.html" %}
+{% block title %}Журнал відвідувань{% endblock %}
+
 {% block content %}
-<div class="card-panel">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/journal.css') }}">
+<script defer src="{{ url_for('static', filename='js/journal.js') }}"></script>
 
-<h2 class="mb-3">Журнал – {{ days[0].strftime('%B %Y')|capitalize }}</h2>
+<h2 class="my-3 text-center">Журнал відвідувань – {{ month }} / {{ year }}</h2>
 
-<div class="d-flex justify-content-between mb-2">
-  <a class="btn btn-outline-primary" href="{{ url_for('journal',
-      y=(year if month>1 else year-1), m=(month-1 if month>1 else 12)) }}">← попередній</a>
-  <a class="btn btn-outline-primary" href="{{ url_for('journal',
-      y=(year if month<12 else year+1), m=(month+1 if month<12 else 1)) }}">наступний →</a>
-</div>
-
-<table class="table table-bordered align-middle text-center table-hover">
-  <thead class="table-light">
-    <tr>
-      <th class="text-start">Учень</th>
-      {% for d in days %}<th style="width:40px">{{ d.day }}</th>{% endfor %}
-      <th>₴ / міс.</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for s in students %}
-    <tr id="row-{{ s.id }}">
-      <td class="text-start">{{ s.name }}</td>
-      {% for d in days %}
-      {% set iso = d.isoformat() %}
-      <td class="att {% if iso in attend[s.id] %}table-success{% endif %}"
-          {% if current_user.role=='teacher' %}
-            data-stu="{{ s.id }}" data-date="{{ iso }}"
-          {% endif %}>
-          {% if iso in attend[s.id] %}✓{% endif %}
-      </td>
+<div class="table-responsive">
+  <table class="table table-bordered align-middle text-center">
+    <thead class="table-light">
+      <tr>
+        <th>Учень</th>
+        {% for d in days %}
+          <th style="width:38px">{{ d.day }}</th>
+        {% endfor %}
+        <th>Сума&nbsp;грн</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in students %}
+      <tr data-student="{{ row.id }}">
+        <th class="text-start">{{ row.name }}</th>
+        {% for d in days %}
+          {% set date_iso = d.isoformat() %}
+          {% set checked = date_iso in attend[row.id] %}
+          <td>
+            <input type="checkbox"
+                   class="form-check-input attend"
+                   data-date="{{ date_iso }}"
+                   {% if checked %}checked{% endif %}/>
+          </td>
+        {% endfor %}
+        <td class="fw-bold sum">{{ row.month_sum }}</td>
+      </tr>
       {% endfor %}
-      <td class="month-sum fw-semibold">{{ s.month_sum }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-  <tfoot>
-    <tr class="table-secondary">
-      <td colspan="{{ days|length + 1 }}" class="text-end fw-bold">Усього:</td>
-      <td id="total">{{ total }}</td>
-    </tr>
-  </tfoot>
-</table>
-
+    </tbody>
+    <tfoot>
+      <tr class="table-secondary">
+        <th colspan="{{ days|length + 1 }}">Загалом</th>
+        <th id="grand-total">{{ total }}</th>
+      </tr>
+    </tfoot>
+  </table>
 </div>
-<script src="{{ url_for('static', filename='app.js') }}" defer></script>
 {% endblock %}
