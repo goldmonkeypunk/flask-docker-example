@@ -2,26 +2,26 @@
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  /* ───────── журнал: кліки по комірках ───────── */
+  /** ───────── журнал ───────── **/
   document.querySelectorAll(".att").forEach(td => {
-    if (!td.dataset.stu) return;                // у батьків атрибутів немає
+    if (!td.dataset.stu) return;           // у батьків немає атрибутів
     td.addEventListener("click", async () => {
-      const payload = { student_id: td.dataset.stu, date: td.dataset.date };
       const r = await fetch("/api/attendance/toggle", {
         method : "POST",
         headers: { "Content-Type": "application/json" },
-        body   : JSON.stringify(payload)
+        body   : JSON.stringify({ student_id: td.dataset.stu,
+                                  date: td.dataset.date })
       });
       if (!r.ok) return;
       const j = await r.json();
       td.classList.toggle("table-success");
       td.innerText = td.classList.contains("table-success") ? "✓" : "";
-      td.parentElement.querySelector(".week-sum").innerText = j.week;
-      document.getElementById("total").innerText            = j.total;
+      td.parentElement.querySelector(".month-sum").innerText = j.month_sum;
+      document.getElementById("total").innerText             = j.total;
     });
   });
 
-  /* ───────── add student ───────── */
+  /** ───────── add student ───────── **/
   const addStudent = document.getElementById("addStudent");
   if (addStudent){
     addStudent.addEventListener("submit", async e => {
@@ -32,11 +32,11 @@ document.addEventListener("DOMContentLoaded", () => {
         method:"POST", headers:{'Content-Type':'application/json'},
         body:JSON.stringify({name})
       });
-      if (r.ok) location.reload();      // простіше перезавантажити
+      if (r.ok) location.reload();
     });
   }
 
-  /* ───────── add song ───────── */
+  /** ───────── add song ───────── **/
   const addSong = document.getElementById("addSong");
   if (addSong){
     addSong.addEventListener("submit", async e => {
@@ -50,19 +50,20 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ───────── assign song ───────── */
+  /** ───────── assign song ───────── **/
   document.querySelectorAll(".song-select").forEach(sel => {
     sel.addEventListener("change", async () => {
-      const song  = sel.dataset.songId;
-      const stud  = sel.value;
-      if (!stud) return;
+      const sid = sel.dataset.stu || sel.value;   // у різних шаблонів свій атрибут
+      const tid = sel.dataset.songId || sel.value && sel.closest("li")?.dataset?.songId;
+      if (!(sid && tid)) return;
       await fetch("/api/assign", {
         method : "POST",
         headers: { "Content-Type": "application/json" },
-        body   : JSON.stringify({ student_id: stud, song_id: song })
+        body   : JSON.stringify({ student_id: sid, song_id: tid })
       });
       sel.selectedIndex = 0;
     });
   });
 
 });
+  

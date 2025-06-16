@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-3">Каталог пісень</h2>
+
+{% if current_user.role=='teacher' %}
+<form id="addSong" class="row g-2 mb-4">
+  <div class="col-md-3"><input class="form-control" name="title" placeholder="Назва" required></div>
+  <div class="col-md-3"><input class="form-control" name="author" placeholder="Автор" required></div>
+  <div class="col-md-2">
+    <select class="form-select" name="difficulty">
+      {% for i in range(1,5) %}<option value="{{ i }}">{{ '★'*i }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-success w-100">Додати</button></div>
+</form>
+{% endif %}
+
+<table class="table table-striped">
+  <thead class="table-light"><tr><th>Назва</th><th>Автор</th><th>Складність</th></tr></thead>
+  <tbody id="songTable">
+    {% for s in songs %}
+    <tr><td>{{ s.title }}</td><td>{{ s.author }}</td><td>{{ '★'*s.difficulty }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script src="{{ url_for('static', filename='app.js') }}" defer></script>
+{% endblock %}
