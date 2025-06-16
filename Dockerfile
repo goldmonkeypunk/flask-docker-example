@@ -1,11 +1,29 @@
-FROM python:3.12-slim AS base
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# ──────────────────────────────────────────────────────────────
+# Базовий імідж + оновлення pip
+# ──────────────────────────────────────────────────────────────
+FROM python:3.12-slim
 
-FROM base AS runtime
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# ──────────────────────────────────────────────────────────────
+# Встановлюємо продакшн-та Dev-залежності
+# ──────────────────────────────────────────────────────────────
+COPY requirements.txt requirements.txt
+COPY requirements-dev.txt requirements-dev.txt
+
+RUN pip install --no-cache-dir --upgrade pip \
+ && pip install --no-cache-dir -r requirements.txt \
+ && pip install --no-cache-dir -r requirements-dev.txt
+
+# ──────────────────────────────────────────────────────────────
+# Копіюємо код застосунку
+# ──────────────────────────────────────────────────────────────
 COPY . .
-ENV PYTHONUNBUFFERED=1
-EXPOSE 5000
-HEALTHCHECK CMD curl -f http://localhost:5000/healthz || exit 1
-CMD ["gunicorn","-k","gevent","--bind","0.0.0.0:5000","app:app"]
+
+# ──────────────────────────────────────────────────────────────
+# Gunicorn + gevent — без абсолютного шляху, він у $PATH
+# ──────────────────────────────────────────────────────────────
+CMD ["gunicorn", "-k", "gevent", "--workers", "4", "--bind", "0.0.0.0:5000", "app:app"]
